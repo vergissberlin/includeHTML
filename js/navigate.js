@@ -1,53 +1,68 @@
-function includeHTML() {
-    var z, i, elmnt, file, xhttp;
-    /*loop through a collection of all HTML elements:*/
-    z = document.getElementsByTagName("*");
-    for (i = 0; i < z.length; i++) {
-        elmnt = z[i];
-        /*search for elements with a certain atrribute:*/
-        file = elmnt.getAttribute("w3-include-html");
-        if (file) {
-            /*make an HTTP request using the attribute value as the file name:*/
-            xhttp = new XMLHttpRequest();
-            xhttp.onreadystatechange = function () {
-                if (this.readyState == 4) {
-                    if (this.status == 200) {elmnt.innerHTML = this.responseText;}
-                    if (this.status == 404) {elmnt.innerHTML = "Page not found.";}
-                    /*remove the attribute, and call this function once more:*/
-                    elmnt.removeAttribute("w3-include-html");
-                    includeHTML();
-                }
+let lastClickedElement = null;
+
+class Navigate {
+    content = document.getElementById('content');
+    lastClickedElement = null;
+
+    constructor(url, title) {
+        console.info('🤖\tNavigator loaded:', title, url);
+        this.catchBackButton();
+        this.load(url).then(html => {
+            this.content.innerHTML = html;
+            document.title = title;
+            let element = document.querySelector(`[data-title='${title}']`)
+            if (element) {
+                element.classList.add('active');
+                this.lastClickedElement = element;
             }
-            xhttp.open("GET", file, true);
-            xhttp.send();
-            return;
+        });
+    }
+
+    /**
+     * Navigate to a new url
+     * @param {DOMElement} element 
+     */
+    navigateTo(element) {
+        let file = element.getAttribute('data-file')
+        let title = element.getAttribute('data-title')
+
+        this.load(file).then(html => {
+            document.title = title;
+            this.content.innerHTML = html;
+            if (this.lastClickedElement) {
+                this.lastClickedElement.classList.remove('active');
+            }
+            this.lastClickedElement = element;
+        });
+    }
+
+    catchBackButton() {
+        window.onpopstate = function (event) {
+            console.info('🤖\tBack button pressed', event);
+            if (event.state?.url && event.state?.title) {
+                let url = event.state?.url;
+                let title = event.state?.title;
+                let element = document.querySelector(`[data-title='${title}']`)
+                if (element) {
+                    element.classList.add('active');
+                }
+                this.load(url).then(html => {
+                    this.content.innerHTML = html;
+                    document.title = title;
+                }
+                );
+            }
         }
     }
-};
 
-let lastClickedElement = null;
-const navigate = (element) => {
-    // Replace content from id=replace with content from Ajax request with url
-    let file = element.getAttribute('data-file'),
-        title = element.getAttribute('data-title')
-    var xhttp = new XMLHttpRequest();
-    xhttp.onreadystatechange = function () {
-        if (this.readyState == 4) {
-            if (this.status == 200) {
-                document.getElementById("replace").innerHTML = this.responseText;
-                history.pushState(null, title, file)
-                document.title = title;
-                element.classList.add('active');
-                lastClickedElement && lastClickedElement.classList.remove('active');
-                lastClickedElement = element;
-            }
-            if (this.status == 404) {
-                document.getElementById("replace").innerHTML = "Page not found.";
-            }
-        }
-    };
-    xhttp.open("GET", file, true);
-    xhttp.send();
+
+    async load(url) {
+        let spinner = document.getElementById('spinner');
+        spinner.classList.remove('visually-hidden');
+        const response = await fetch(url).then(response => response.text());
+        spinner.classList.add('visually-hidden');
+        return response;
+    }
+
 }
 
-document.createElement('include');
