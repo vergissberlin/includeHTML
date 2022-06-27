@@ -29,6 +29,7 @@ class Navigate {
         this.load(file).then(html => {
             document.title = title;
             this.content.innerHTML = html;
+            history.pushState(null, title, file)
             if (this.lastClickedElement) {
                 this.lastClickedElement.classList.remove('active');
             }
@@ -38,7 +39,6 @@ class Navigate {
 
     catchBackButton() {
         window.onpopstate = function (event) {
-            console.info('🤖\tBack button pressed', event);
             if (event.state?.url && event.state?.title) {
                 let url = event.state?.url;
                 let title = event.state?.title;
